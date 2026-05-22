@@ -1,0 +1,7 @@
+{
+  "name": "b77-mahlo-check-mailer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vercel-Funktion, die Vertriebs-Check-Antworten per Brevo an B_77 versendet.",
+  "engines": { "node": ">=18" }
+}
