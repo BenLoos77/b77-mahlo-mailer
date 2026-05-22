@@ -43,6 +43,7 @@ module.exports = async (req, res) => {
     const summaryText = (body.summaryText || "").toString();
     const kundeEmail = (body.kundeEmail || "").toString().trim();
     const kundeName = (body.kundeName || "").toString().trim().slice(0, 120);
+    const summaryHtml = (body.summaryHtml || "").toString();
 
     if (!summaryText || summaryText.length < 20) {
       res.status(400).json({ ok: false, error: "Leere oder ungültige Zusammenfassung." });
@@ -51,16 +52,17 @@ module.exports = async (req, res) => {
 
     const apiKey = process.env.BREVO_API_KEY;
     if (!apiKey) {
-      res.status(500).json({ ok: false, error: "Serverkonfiguration fehlt (BREVO_API_KEY)." });
+      res.status(500).json({ ok: false, error: "BREVO_API_KEY fehlt in Vercel (Environment Variables) oder Re-Deploy steht aus." });
       return;
     }
 
-    const htmlContent =
-      `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#0a0a0a;">
-        <h2 style="font-size:18px;margin:0 0 12px;">Vertriebs-Check Mahlo — Positionsbestimmung</h2>
-        <p style="color:#666;margin:0 0 18px;">Eingegangen über den B_77 Vertriebs-Check auf b77.de.</p>
-        <pre style="white-space:pre-wrap;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;margin:0;">${escapeHtml(summaryText)}</pre>
-      </div>`;
+    const htmlContent = (summaryHtml && summaryHtml.length > 50)
+      ? summaryHtml
+      : `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#0a0a0a;">
+          <h2 style="font-size:18px;margin:0 0 12px;">Vertriebs-Check Mahlo — Positionsbestimmung</h2>
+          <p style="color:#666;margin:0 0 18px;">Eingegangen über den B_77 Vertriebs-Check auf b77.de.</p>
+          <pre style="white-space:pre-wrap;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;margin:0;">${escapeHtml(summaryText)}</pre>
+        </div>`;
 
     const payload = {
       sender: SENDER,
@@ -90,7 +92,10 @@ module.exports = async (req, res) => {
 
     if (!brevoResp.ok) {
       const detail = await brevoResp.text().catch(() => "");
-      res.status(502).json({ ok: false, error: "Versand fehlgeschlagen.", detail: detail.slice(0, 300) });
+      res.status(502).json({
+        ok: false,
+        error: "Brevo lehnte den Versand ab (HTTP " + brevoResp.status + "): " + detail.slice(0, 400)
+      });
       return;
     }
 
